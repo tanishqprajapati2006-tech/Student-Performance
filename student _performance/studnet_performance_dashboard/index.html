@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="EduDash">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduDash - Welcome</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        .split-layout { display: flex; min-height: 100vh; }
+        .split-left { flex: 0 0 40%; background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 4rem; color: white; display: flex; flex-direction: column; justify-content: center; }
+        .split-left * { color: white; }
+        .split-right { flex: 0 0 60%; background: var(--surface); display: flex; align-items: center; justify-content: center; padding: 2rem; }
+        .login-box { width: 100%; max-width: 480px; }
+        .tabs { display: flex; margin-bottom: 2rem; border-bottom: 2px solid var(--border); }
+        .tab { padding: 10px 20px; cursor: pointer; font-weight: 500; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .demo-box { background: var(--bg); border-radius: 8px; padding: 1rem; margin-top: 2rem; font-size: 0.9rem; border: 1px dashed var(--border); }
+        .error-msg { background: #FEF2F2; color: var(--danger); border: 1px solid #FECACA; border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem; font-size: 0.9rem; }
+        .feature-item { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    </style>
+</head>
+<body ng-controller="LoginCtrl as ctrl">
+
+<div class="split-layout">
+    <div class="split-left">
+        <h1 style="font-size: 3rem; margin-bottom: 0.5rem;">EduDash</h1>
+        <p style="font-size: 1.25rem; opacity: 0.9; margin-bottom: 3rem;">Track. Grow. Achieve.</p>
+        <div class="feature-item"><div style="font-size: 1.5rem;">📊</div><div><strong style="display:block; font-size:1.1rem;">Track your performance</strong><span style="opacity:0.8;">Live academic insights.</span></div></div>
+        <div class="feature-item"><div style="font-size: 1.5rem;">🎯</div><div><strong style="display:block; font-size:1.1rem;">Set and achieve goals</strong><span style="opacity:0.8;">Stay focused on your growth.</span></div></div>
+        <div class="feature-item"><div style="font-size: 1.5rem;">🏆</div><div><strong style="display:block; font-size:1.1rem;">Earn certificates</strong><span style="opacity:0.8;">Build your professional portfolio.</span></div></div>
+    </div>
+
+    <div class="split-right">
+        <div class="login-box card" style="box-shadow: none; border: none;">
+
+            <!-- LOGIN FORM -->
+            <div ng-show="!ctrl.isRegistering">
+                <h2 style="font-size: 2rem; margin-bottom: 1.5rem;">Welcome back</h2>
+                <div class="tabs">
+                    <div class="tab" ng-class="{'active': ctrl.role === 'student'}" ng-click="ctrl.role = 'student'">Student</div>
+                    <div class="tab" ng-class="{'active': ctrl.role === 'teacher'}" ng-click="ctrl.role = 'teacher'">Teacher</div>
+                </div>
+                <div class="error-msg" ng-if="ctrl.error">{{ ctrl.error }}</div>
+                <form ng-submit="ctrl.login()">
+                    <div class="form-group"><label>Email Address</label><input type="email" ng-model="ctrl.email" required placeholder="you@university.edu"></div>
+                    <div class="form-group"><label>Password</label><input type="password" ng-model="ctrl.password" required placeholder="••••••••"></div>
+                    <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;" ng-disabled="ctrl.loading">
+                        {{ ctrl.loading ? 'Signing in...' : 'Sign In' }}
+                    </button>
+                </form>
+                <p style="text-align: center; margin-top: 1.5rem; font-size: 0.95rem;">Don't have an account? <a href="#" ng-click="ctrl.isRegistering = true; ctrl.reg = { role: 'student' }; ctrl.regError = null; $event.preventDefault();">Register here</a></p>
+                <div class="demo-box" style="color: var(--text-muted);">
+                    <strong style="display:block; margin-bottom: 5px; color: var(--text-main);">Demo Credentials:</strong>
+                    Student: student@demo.com / demo123<br>
+                    Teacher: teacher@demo.com / demo123
+                </div>
+            </div>
+
+            <!-- REGISTER FORM -->
+            <div ng-show="ctrl.isRegistering">
+                <h2 style="font-size: 2rem; margin-bottom: 1.5rem;">Create Account</h2>
+                <div class="error-msg" ng-if="ctrl.regError">{{ ctrl.regError }}</div>
+                <form ng-submit="ctrl.register()">
+                    <div class="form-group"><label>Full Name</label><input type="text" ng-model="ctrl.reg.name" required></div>
+                    <div class="form-group"><label>Email</label><input type="email" ng-model="ctrl.reg.email" required></div>
+                    <div class="form-group"><label>Password</label><input type="password" ng-model="ctrl.reg.password" required></div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select ng-model="ctrl.reg.role"><option value="student">Student</option><option value="teacher">Teacher</option></select>
+                    </div>
+                    <div ng-if="ctrl.reg.role === 'student'">
+                        <div style="display:flex; gap: 1rem;">
+                            <div class="form-group" style="flex: 1;"><label>Roll Number</label><input type="text" ng-model="ctrl.reg.roll_no" required></div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>Year</label>
+                                <select ng-model="ctrl.reg.year" required><option value="1">1st Year</option><option value="2">2nd Year</option><option value="3">3rd Year</option><option value="4">4th Year</option></select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Branch</label>
+                            <select ng-model="ctrl.reg.branch" required><option value="CSE">Computer Science</option><option value="IT">Information Technology</option><option value="ECE">Electronics</option></select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;" ng-disabled="ctrl.regLoading">
+                        {{ ctrl.regLoading ? 'Creating...' : 'Create Account' }}
+                    </button>
+                    <button type="button" class="btn" style="width: 100%; margin-top: 0.5rem; background: var(--bg); border: 1px solid var(--border);" ng-click="ctrl.isRegistering = false; ctrl.reg = { role: 'student' }; ctrl.regError = null;">Back to Login</button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+<script>
+    const app = angular.module('EduDash', []);
+
+    app.controller('LoginCtrl', function($http, $scope) {
+        const vm = this;
+        vm.role = 'student';
+        vm.isRegistering = false;
+        vm.reg = { role: 'student' };
+        vm.error = null;
+        vm.regError = null;
+        vm.loading = false;
+        vm.regLoading = false;
+
+        // Demo shortcut credentials removed — all logins go through DB
+        vm.login = function() {
+            vm.error = null;
+            vm.loading = true;
+
+            var email = (vm.email || '').trim().toLowerCase();
+            var password = vm.password || '';
+
+            // All logins go through real backend
+            $http.post('/api/auth/login', { email: email, password: password })
+                .then(function(res) {
+                    vm.loading = false;
+                    localStorage.setItem('eduToken', res.data.token);
+                    localStorage.setItem('eduProfile', JSON.stringify(res.data.profile));
+                    if (res.data.role === 'teacher') window.location.href = 'teacher-dashboard.html';
+                    else window.location.href = 'student-dashboard.html';
+                })
+                .catch(function(err) {
+                    vm.loading = false;
+                    vm.error = (err.data && err.data.error) ? err.data.error : 'Login failed. Check your credentials.';
+                });
+        };
+
+        vm.register = function() {
+            vm.regError = null;
+            vm.regLoading = true;
+            $http.post('/api/auth/register', vm.reg)
+                .then(function() {
+                    vm.regLoading = false;
+                    vm.isRegistering = false;
+                    vm.email = vm.reg.email;
+                    vm.error = null;
+                    alert('Account created! Please sign in.');
+                })
+                .catch(function(err) {
+                    vm.regLoading = false;
+                    vm.regError = (err.data && err.data.error) ? err.data.error : 'Registration failed.';
+                });
+        };
+    });
+</script>
+</body>
+</html>

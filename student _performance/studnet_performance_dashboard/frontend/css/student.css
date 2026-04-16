@@ -1,0 +1,175 @@
+/* public/css/student.css */
+.dashboard-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    height: 100vh;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar .profile {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.sidebar .avatar {
+    width: 64px;
+    height: 64px;
+    background: var(--bg);
+    border-radius: 50%;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nav-links li a {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    color: var(--text-muted);
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.nav-links li a:hover {
+    background: var(--bg);
+    color: var(--text-main);
+}
+
+.nav-links li a.active {
+    background: var(--bg);
+    color: var(--primary);
+    border-left-color: var(--primary);
+}
+
+.main-content {
+    flex: 1;
+    margin-left: 240px;
+    padding: 2rem 3rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card .number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 10px 0;
+}
+
+.stat-card.primary .number { color: var(--primary); }
+.stat-card.success .number { color: var(--success); }
+.stat-card.secondary .number { color: var(--secondary); }
+.stat-card.warning .number { color: var(--warning); }
+
+.content-grid {
+    display: grid;
+    grid-template-columns: 60% 40%;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.content-grid-half {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.panel-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.goal-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.progress-bg {
+    background: var(--bg);
+    height: 8px;
+    border-radius: 4px;
+    width: 100%;
+    margin: 10px 0;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--secondary);
+    border-radius: 4px;
+}
+
+.streak-card {
+    text-align: center;
+    padding: 2rem;
+}
+
+.streak-card .fire {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-top: 1.5rem;
+}
+
+.cal-dot {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--border);
+    margin: 0 auto;
+}
+
+.cal-dot.active {
+    background: var(--success);
+}

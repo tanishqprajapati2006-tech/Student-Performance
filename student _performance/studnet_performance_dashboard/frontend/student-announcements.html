@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="EduDash">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduDash - Announcements</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/student.css">
+</head>
+<body ng-controller="AnnouncementsCtrl as ctrl">
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="profile">
+            <div class="avatar" style="background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:1.5rem;">{{ ctrl.profile.name.charAt(0) }}</div>
+            <strong style="display:block; font-size:1rem; margin-bottom:3px;">{{ ctrl.profile.name }}</strong>
+            <span class="text-muted" style="font-size:0.8rem;">{{ ctrl.profile.roll_no }}</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="student-dashboard.html">🏠 Dashboard</a></li>
+            <li><a href="student-marks.html">📊 My Marks</a></li>
+            <li><a href="student-attendance.html">📅 Attendance</a></li>
+            <li><a href="student-goals.html">🎯 My Goals</a></li>
+            <li><a href="student-certificates.html">📜 Certificates</a></li>
+            <li><a href="student-leaderboard.html">🏆 Leaderboard</a></li>
+            <li><a href="student-announcements.html" class="active">🔔 Announcements</a></li>
+            <li><a href="student-settings.html">⚙️ Settings</a></li>
+        </ul>
+        <div style="margin-top:auto;"><button class="btn" style="width:100%; border:1px solid var(--border); background:transparent;" ng-click="ctrl.logout()">Logout</button></div>
+    </aside>
+    <main class="main-content">
+        <div class="header">
+            <h1 style="font-size:1.6rem;">Notice Board 🔔</h1>
+            <button class="btn btn-primary" ng-click="ctrl.load()">Refresh</button>
+        </div>
+        <div ng-if="ctrl.loading" style="padding:3rem; text-align:center; color:var(--text-muted);">Loading...</div>
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+            <div ng-repeat="a in ctrl.announcements" class="card" style="padding:1.5rem;"
+                 ng-style="{'border-left': a.priority==='High / Urgent' ? '4px solid var(--danger)' : '4px solid var(--primary)', 'background': a.priority==='High / Urgent' ? '#FEF2F2' : 'white'}">
+                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:0.75rem;">
+                    <div>
+                        <span ng-if="a.priority==='High / Urgent'" style="background:#FDE8E8; color:var(--danger); font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:12px; margin-right:8px;">URGENT</span>
+                        <strong style="font-size:1rem;" ng-style="{'color': a.priority==='High / Urgent' ? 'var(--danger)' : 'inherit'}">{{ a.title }}</strong>
+                    </div>
+                    <span class="text-muted" style="font-size:0.78rem; white-space:nowrap; margin-left:1rem;">{{ a.posted_date }}</span>
+                </div>
+                <p style="font-size:0.9rem; color:var(--text-muted); line-height:1.6;">{{ a.message }}</p>
+                <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.5rem;">— {{ a.author_name }}</p>
+            </div>
+            <div ng-if="!ctrl.loading && ctrl.announcements.length===0" style="padding:4rem; text-align:center; color:var(--text-muted);">
+                <p style="font-size:1.1rem;">No announcements yet.</p>
+                <p style="font-size:0.85rem; margin-top:4px;">Your teacher will post updates here.</p>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="js/config.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+<script>
+const app = angular.module('EduDash', []);
+app.controller('AnnouncementsCtrl', function($http) {
+    const vm = this;
+    const token = localStorage.getItem('eduToken');
+    const profileStr = localStorage.getItem('eduProfile');
+    if (!token) { window.location.href = 'index.html'; return; }
+    vm.profile = profileStr ? JSON.parse(profileStr) : {};
+    vm.announcements = []; vm.loading = true;
+    vm.load = function() {
+        vm.loading = true;
+        $http.get(' + API_BASE + '/api/announcements', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(res) {
+            vm.loading = false;
+            if (res.data.success) vm.announcements = res.data.announcements;
+        }).catch(function(){vm.loading=false;});
+    };
+    vm.load();
+    vm.logout = function(){localStorage.removeItem('eduToken');localStorage.removeItem('eduProfile');window.location.href='index.html';};
+});
+</script>
+</body>
+</html>

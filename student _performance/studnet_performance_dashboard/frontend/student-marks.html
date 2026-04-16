@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="EduDash">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduDash - My Marks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/student.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body ng-controller="MarksCtrl as ctrl">
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="profile">
+            <div class="avatar" style="background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:1.5rem;">{{ ctrl.profile.name.charAt(0) }}</div>
+            <strong style="display:block; font-size:1rem; margin-bottom:3px;">{{ ctrl.profile.name }}</strong>
+            <span class="text-muted" style="font-size:0.8rem;">{{ ctrl.profile.roll_no }}</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="student-dashboard.html">🏠 Dashboard</a></li>
+            <li><a href="student-marks.html" class="active">📊 My Marks</a></li>
+            <li><a href="student-attendance.html">📅 Attendance</a></li>
+            <li><a href="student-goals.html">🎯 My Goals</a></li>
+            <li><a href="student-certificates.html">📜 Certificates</a></li>
+            <li><a href="student-leaderboard.html">🏆 Leaderboard</a></li>
+            <li><a href="student-announcements.html">🔔 Announcements</a></li>
+            <li><a href="student-settings.html">⚙️ Settings</a></li>
+        </ul>
+        <div style="margin-top:auto;"><button class="btn" style="width:100%; border:1px solid var(--border); background:transparent;" ng-click="ctrl.logout()">Logout</button></div>
+    </aside>
+    <main class="main-content">
+        <div class="header"><h1 style="font-size:1.6rem;">Academic Transcript</h1></div>
+
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:2rem;">
+            <div class="card stat-card primary"><div class="text-muted">Subjects</div><div class="number">{{ ctrl.marks.length }}</div></div>
+            <div class="card stat-card success"><div class="text-muted">Average</div><div class="number">{{ ctrl.avg }}%</div></div>
+            <div class="card stat-card danger"><div class="text-muted">Failed</div><div class="number" style="color:var(--danger)">{{ ctrl.failed }}</div></div>
+        </div>
+
+        <div class="content-grid" style="margin-bottom:2rem;">
+            <div class="card">
+                <div class="panel-title">Marks Breakdown</div>
+                <div ng-if="ctrl.loading" style="padding:2rem; text-align:center; color:var(--text-muted);">Loading...</div>
+                <table ng-if="!ctrl.loading && ctrl.marks.length > 0" style="width:100%; border-collapse:collapse; margin-top:0.5rem;">
+                    <thead><tr style="text-align:left; border-bottom:2px solid var(--border);">
+                        <th style="padding:10px;">Subject</th>
+                        <th style="padding:10px;">Type</th>
+                        <th style="padding:10px;">Max</th>
+                        <th style="padding:10px;">Obtained</th>
+                        <th style="padding:10px;">Grade</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr ng-repeat="m in ctrl.marks" style="border-bottom:1px solid var(--border);">
+                            <td style="padding:10px;"><strong style="font-size:0.9rem;">{{ m.subject_name }}</strong><br><span class="text-muted" style="font-size:0.78rem;">{{ m.subject_code }}</span></td>
+                            <td style="padding:10px; font-size:0.85rem; color:var(--text-muted);">{{ m.exam_type }}</td>
+                            <td style="padding:10px; font-size:0.88rem;">{{ m.max_marks }}</td>
+                            <td style="padding:10px; font-weight:700; font-size:1rem;" ng-style="{'color': (m.obtained_marks/m.max_marks)>=0.4 ? 'var(--primary)' : 'var(--danger)'}">{{ m.obtained_marks }}</td>
+                            <td style="padding:10px;"><span style="padding:3px 10px; border-radius:12px; font-size:0.82rem; font-weight:600;" ng-style="{'background': m.grade==='F' ? '#FDE8E8' : '#DEF7EC', 'color': m.grade==='F' ? 'var(--danger)' : 'var(--success)'}">{{ m.grade }}</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div ng-if="!ctrl.loading && ctrl.marks.length===0" style="padding:3rem; text-align:center; color:var(--text-muted);">
+                    <p style="font-size:1rem;">No marks recorded yet.</p>
+                    <p style="font-size:0.85rem; margin-top:4px;">Your teacher will enter marks from the teacher portal.</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="panel-title">Performance Chart</div>
+                <div ng-if="ctrl.marks.length > 0" style="height:280px;"><canvas id="marksChart"></canvas></div>
+                <div ng-if="ctrl.marks.length===0" style="padding:3rem; text-align:center; color:var(--text-muted);">No data yet.</div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="js/config.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+<script>
+const app = angular.module('EduDash', []);
+app.controller('MarksCtrl', function($http) {
+    const vm = this;
+    const token = localStorage.getItem('eduToken');
+    const profileStr = localStorage.getItem('eduProfile');
+    if (!token) { window.location.href = 'index.html'; return; }
+    vm.profile = profileStr ? JSON.parse(profileStr) : {};
+    vm.marks = []; vm.avg = 0; vm.failed = 0; vm.loading = true;
+    $http.get(' + API_BASE + '/api/students/dashboard', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(res) {
+        vm.loading = false;
+        vm.marks = res.data.marks || [];
+        if (vm.marks.length > 0) {
+            vm.avg = Math.round(vm.marks.reduce(function(s,m){return s+(m.obtained_marks||0);},0) / vm.marks.length);
+            vm.failed = vm.marks.filter(function(m){return m.grade==='F';}).length;
+            setTimeout(function() {
+                var ctx = document.getElementById('marksChart');
+                if (!ctx) return;
+                new Chart(ctx, {
+                    type:'bar',
+                    data:{ labels:vm.marks.map(function(m){return m.subject_name||m.subject_code;}), datasets:[{label:'Marks',data:vm.marks.map(function(m){return m.obtained_marks;}),backgroundColor:vm.marks.map(function(m){return m.grade==='F'?'#EF4444':'#2563EB';}),borderRadius:6}]},
+                    options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:100}}}
+                });
+            }, 100);
+        }
+    }).catch(function(){vm.loading=false;});
+    vm.logout = function(){localStorage.removeItem('eduToken');localStorage.removeItem('eduProfile');window.location.href='index.html';};
+});
+</script>
+</body>
+</html>

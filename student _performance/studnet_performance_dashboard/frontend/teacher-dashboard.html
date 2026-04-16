@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="EduDash">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduDash - Teacher Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/student.css">
+    <style>
+        .student-card { cursor:pointer; transition:all 0.2s; border:2px solid transparent; }
+        .student-card:hover { border-color:var(--primary); transform:translateY(-3px); }
+        .student-card.at-risk { border-left:4px solid var(--danger); }
+        .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600; }
+        .badge-green { background:#DEF7EC; color:#065F46; }
+        .badge-red { background:#FDE8E8; color:#9B1C1C; }
+        .badge-yellow { background:#FEF3C7; color:#92400E; }
+        .badge-blue { background:#EFF6FF; color:#1E40AF; }
+        .detail-panel { position:fixed; top:0; right:0; width:520px; height:100vh; background:white; box-shadow:-4px 0 20px rgba(0,0,0,0.15); z-index:100; overflow-y:auto; transform:translateX(100%); transition:transform 0.3s ease; }
+        .detail-panel.open { transform:translateX(0); }
+        .panel-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:99; display:none; }
+        .panel-overlay.open { display:block; }
+        .tab-btn { padding:8px 16px; border:none; background:transparent; cursor:pointer; font-weight:500; color:var(--text-muted); border-bottom:2px solid transparent; }
+        .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+        .stat-mini { background:var(--bg); border-radius:8px; padding:12px 16px; text-align:center; }
+        .stat-mini .val { font-size:1.5rem; font-weight:700; }
+    </style>
+</head>
+<body ng-controller="TeacherCtrl as ctrl">
+
+<div class="dashboard-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="profile">
+            <div class="avatar" style="background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:1.8rem;">👩‍🏫</div>
+            <strong style="display:block; font-size:1rem; margin-bottom:3px;">{{ ctrl.profile.name }}</strong>
+            <span class="text-muted" style="font-size:0.82rem;">Teacher · {{ ctrl.profile.branch || 'CSE' }}</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="teacher-dashboard.html" class="active">🏠 Dashboard</a></li>
+            <li><a href="#" ng-click="ctrl.showAttendanceModal=true; $event.preventDefault()">📝 Mark Attendance</a></li>
+            <li><a href="#" ng-click="ctrl.showMarksModal=true; $event.preventDefault()">📊 Enter Marks</a></li>
+            <li><a href="#" ng-click="ctrl.showPostModal=true; $event.preventDefault()">🔔 Post Announcement</a></li>
+        </ul>
+        <div style="margin-top:auto;">
+            <button class="btn" style="width:100%; border:1px solid var(--border); background:transparent;" ng-click="ctrl.logout()">Logout</button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <h1 style="font-size:1.6rem;">Class Overview</h1>
+                <p class="text-muted" style="font-size:0.88rem;">{{ ctrl.currentDate }}</p>
+            </div>
+            <button class="btn btn-primary" ng-click="ctrl.showPostModal=true">📢 Post Announcement</button>
+        </div>
+
+        <!-- STATS ROW -->
+        <div class="stats-grid" style="margin-bottom:2rem;">
+            <div class="card stat-card primary"><div class="text-muted">Total Students</div><div class="number">{{ ctrl.classStats.totalStudents }}</div></div>
+            <div class="card stat-card success"><div class="text-muted">Class Average</div><div class="number">{{ ctrl.classStats.avgMark }}%</div></div>
+            <div class="card stat-card warning"><div class="text-muted">Avg Attendance</div><div class="number">{{ ctrl.classStats.avgAttendance }}%</div></div>
+            <div class="card stat-card danger"><div class="text-muted">At Risk</div><div class="number" style="color:var(--danger)">{{ ctrl.atRisk.length }}</div></div>
+        </div>
+
+        <!-- STUDENT CARDS GRID -->
+        <div class="card" style="margin-bottom:2rem;">
+            <div class="panel-title">
+                Student Directory
+                <input type="text" ng-model="ctrl.search" placeholder="Search by name or roll no..." style="width:220px; padding:6px 12px; font-size:0.88rem; border:1px solid var(--border); border-radius:8px;">
+            </div>
+            <div ng-if="ctrl.loadingStudents" style="padding:2rem; text-align:center; color:var(--text-muted);">Loading students...</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:1rem; margin-top:1rem;">
+                <div class="card student-card" ng-class="{'at-risk': s.atRisk}"
+                     ng-repeat="s in ctrl.students | filter:ctrl.search"
+                     ng-click="ctrl.openStudent(s)"
+                     style="padding:1.2rem; margin:0;">
+                    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:0.75rem;">
+                        <div style="width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--secondary)); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:1rem;">
+                            {{ s.name.charAt(0) }}
+                        </div>
+                        <span class="badge" ng-class="s.atRisk ? 'badge-red' : 'badge-green'">{{ s.atRisk ? '⚠️ At Risk' : '✓ Good' }}</span>
+                    </div>
+                    <strong style="display:block; font-size:0.95rem; margin-bottom:2px;">{{ s.name }}</strong>
+                    <span class="text-muted" style="font-size:0.8rem;">{{ s.roll_no || 'No Roll No' }}</span>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:0.75rem;">
+                        <div class="stat-mini"><div class="val" style="color:var(--primary); font-size:1.1rem;">{{ s.avgMarks }}%</div><div style="font-size:0.72rem; color:var(--text-muted);">Marks</div></div>
+                        <div class="stat-mini"><div class="val" ng-style="{'color': s.attendance < 75 ? 'var(--danger)' : 'var(--success)', 'font-size':'1.1rem'}">{{ s.attendance }}%</div><div style="font-size:0.72rem; color:var(--text-muted);">Attend.</div></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border);">
+                        <span style="font-size:0.8rem; color:var(--text-muted);">📜 {{ s.certs }} certs</span>
+                        <span style="font-size:0.8rem; font-weight:600; color:var(--primary);">Score: {{ s.score }}</span>
+                    </div>
+                </div>
+            </div>
+            <div ng-if="!ctrl.loadingStudents && ctrl.students.length === 0" style="padding:3rem; text-align:center; color:var(--text-muted);">
+                No students registered yet.
+            </div>
+        </div>
+
+        <!-- RECENT ANNOUNCEMENTS -->
+        <div class="card">
+            <div class="panel-title">Recent Announcements</div>
+            <div ng-repeat="a in ctrl.announcements | limitTo:3" style="padding:1rem; border-radius:0 8px 8px 0; margin-bottom:8px;"
+                 ng-style="{'background': a.priority==='High / Urgent' ? '#FEF2F2' : 'var(--bg)', 'border-left': a.priority==='High / Urgent' ? '3px solid var(--danger)' : '3px solid var(--primary)'}">
+                <strong style="display:block; font-size:0.92rem;" ng-style="{'color': a.priority==='High / Urgent' ? 'var(--danger)' : 'inherit'}">{{ a.title }}</strong>
+                <span class="text-muted" style="font-size:0.84rem;">{{ a.message }}</span>
+                <span class="text-muted" style="font-size:0.78rem; display:block; margin-top:4px;">{{ a.posted_date }}</span>
+            </div>
+            <div ng-if="ctrl.announcements.length===0" class="text-muted" style="padding:1rem; text-align:center;">No announcements yet.</div>
+        </div>
+    </main>
+
+    <!-- STUDENT DETAIL PANEL OVERLAY -->
+    <div class="panel-overlay" ng-class="{'open': ctrl.selectedStudent}" ng-click="ctrl.closeStudent()"></div>
+
+    <!-- STUDENT DETAIL PANEL -->
+    <div class="detail-panel" ng-class="{'open': ctrl.selectedStudent}">
+        <div ng-if="ctrl.selectedStudent" style="padding:1.5rem;">
+            <!-- Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <div style="width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--secondary)); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:1.4rem;">
+                        {{ ctrl.selectedStudent.name.charAt(0) }}
+                    </div>
+                    <div>
+                        <strong style="display:block; font-size:1.1rem;">{{ ctrl.selectedStudent.name }}</strong>
+                        <span class="text-muted" style="font-size:0.84rem;">{{ ctrl.selectedStudent.roll_no }} · {{ ctrl.selectedStudent.branch }} Year {{ ctrl.selectedStudent.year }}</span>
+                    </div>
+                </div>
+                <button ng-click="ctrl.closeStudent()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">✕</button>
+            </div>
+
+            <!-- Mini stats -->
+            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:1.5rem;">
+                <div class="stat-mini"><div class="val" style="color:var(--primary);">{{ ctrl.selectedStudent.score }}</div><div style="font-size:0.72rem; color:var(--text-muted);">Score</div></div>
+                <div class="stat-mini"><div class="val" ng-style="{'color': ctrl.selectedStudent.attendance < 75 ? 'var(--danger)' : 'var(--success)'}">{{ ctrl.selectedStudent.attendance }}%</div><div style="font-size:0.72rem; color:var(--text-muted);">Attend.</div></div>
+                <div class="stat-mini"><div class="val" style="color:var(--primary);">{{ ctrl.selectedStudent.avgMarks }}%</div><div style="font-size:0.72rem; color:var(--text-muted);">Avg Marks</div></div>
+                <div class="stat-mini"><div class="val" style="color:var(--warning);">+{{ ctrl.selectedStudent.bonusPoints }}</div><div style="font-size:0.72rem; color:var(--text-muted);">Bonus</div></div>
+            </div>
+
+            <!-- Award points button -->
+            <button class="btn btn-primary" style="width:100%; margin-bottom:1.5rem;" ng-click="ctrl.showAwardModal=true">🏅 Award Bonus Points</button>
+
+            <!-- Tabs -->
+            <div style="display:flex; border-bottom:2px solid var(--border); margin-bottom:1rem;">
+                <button class="tab-btn" ng-class="{'active': ctrl.detailTab==='marks'}" ng-click="ctrl.detailTab='marks'">Marks</button>
+                <button class="tab-btn" ng-class="{'active': ctrl.detailTab==='attendance'}" ng-click="ctrl.detailTab='attendance'">Attendance</button>
+                <button class="tab-btn" ng-class="{'active': ctrl.detailTab==='certs'}" ng-click="ctrl.detailTab='certs'">Certificates</button>
+                <button class="tab-btn" ng-class="{'active': ctrl.detailTab==='goals'}" ng-click="ctrl.detailTab='goals'">Goals</button>
+            </div>
+
+            <!-- MARKS TAB -->
+            <div ng-if="ctrl.detailTab==='marks'">
+                <div ng-if="ctrl.loadingDetail" class="text-muted" style="padding:1rem; text-align:center;">Loading...</div>
+                <table ng-if="!ctrl.loadingDetail && ctrl.detail.marks.length > 0" style="width:100%; border-collapse:collapse;">
+                    <thead><tr style="border-bottom:2px solid var(--border); text-align:left;">
+                        <th style="padding:8px;">Subject</th>
+                        <th style="padding:8px;">Type</th>
+                        <th style="padding:8px;">Marks</th>
+                        <th style="padding:8px;">Grade</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr ng-repeat="m in ctrl.detail.marks" style="border-bottom:1px solid var(--border);">
+                            <td style="padding:8px; font-size:0.88rem;">{{ m.subject_name }}<br><span class="text-muted" style="font-size:0.78rem;">{{ m.subject_code }}</span></td>
+                            <td style="padding:8px; font-size:0.82rem; color:var(--text-muted);">{{ m.exam_type }}</td>
+                            <td style="padding:8px; font-weight:700;" ng-style="{'color': (m.obtained_marks/m.max_marks)>=0.6 ? 'var(--success)' : 'var(--danger)'}">{{ m.obtained_marks }}/{{ m.max_marks }}</td>
+                            <td style="padding:8px; font-weight:600;">{{ m.grade }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div ng-if="!ctrl.loadingDetail && ctrl.detail.marks.length===0" class="text-muted" style="padding:2rem; text-align:center;">No marks entered yet.</div>
+            </div>
+
+            <!-- ATTENDANCE TAB -->
+            <div ng-if="ctrl.detailTab==='attendance'">
+                <div ng-if="ctrl.loadingDetail" class="text-muted" style="padding:1rem; text-align:center;">Loading...</div>
+                <table ng-if="!ctrl.loadingDetail && ctrl.detail.attendance.length > 0" style="width:100%; border-collapse:collapse;">
+                    <thead><tr style="border-bottom:2px solid var(--border); text-align:left;">
+                        <th style="padding:8px;">Date</th>
+                        <th style="padding:8px;">Subject</th>
+                        <th style="padding:8px;">Class</th>
+                        <th style="padding:8px;">Status</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr ng-repeat="a in ctrl.detail.attendance | limitTo:15" style="border-bottom:1px solid var(--border);">
+                            <td style="padding:8px; font-size:0.85rem;">{{ a.date }}</td>
+                            <td style="padding:8px; font-size:0.85rem;">{{ a.subject }}</td>
+                            <td style="padding:8px; font-size:0.85rem; color:var(--text-muted);">{{ a.class_no || '-' }}</td>
+                            <td style="padding:8px;">
+                                <span class="badge" ng-class="a.status==='Present' ? 'badge-green' : 'badge-red'">{{ a.status }}</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div ng-if="!ctrl.loadingDetail && ctrl.detail.attendance.length===0" class="text-muted" style="padding:2rem; text-align:center;">No attendance records yet.</div>
+            </div>
+
+            <!-- CERTIFICATES TAB -->
+            <div ng-if="ctrl.detailTab==='certs'">
+                <div ng-if="ctrl.loadingDetail" class="text-muted" style="padding:1rem; text-align:center;">Loading...</div>
+                <div ng-if="!ctrl.loadingDetail" style="display:flex; flex-direction:column; gap:10px;">
+                    <div ng-repeat="c in ctrl.detail.certificates" style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
+                        <div>
+                            <strong style="display:block; font-size:0.92rem;">{{ c.title }}</strong>
+                            <span class="text-muted" style="font-size:0.8rem;">{{ c.issuer }} · {{ c.category }} · {{ c.issued_date }}</span>
+                        </div>
+                        <a ng-if="c.file_url" ng-href="{{ c.file_url }}" target="_blank" class="btn" style="padding:5px 12px; font-size:0.82rem; background:#EFF6FF; color:var(--primary); border:none; white-space:nowrap;">View 📄</a>
+                        <span ng-if="!c.file_url" class="badge badge-yellow">No file</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GOALS TAB -->
+            <div ng-if="ctrl.detailTab==='goals'">
+                <div ng-if="ctrl.loadingDetail" class="text-muted" style="padding:1rem; text-align:center;">Loading...</div>
+                <div ng-if="!ctrl.loadingDetail" style="display:flex; flex-direction:column; gap:10px;">
+                    <div ng-repeat="g in ctrl.detail.goals" style="padding:12px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                            <strong style="font-size:0.92rem;">{{ g.title }}</strong>
+                            <span class="badge badge-blue">{{ g.category }}</span>
+                        </div>
+                        <div style="background:white; height:6px; border-radius:4px; overflow:hidden; margin-bottom:4px;">
+                            <div style="height:100%; background:var(--primary); border-radius:4px;" ng-style="{'width': ((g.completed/g.total)*100) + '%'}"></div>
+                        </div>
+                        <span class="text-muted" style="font-size:0.8rem;">{{ g.completed }}/{{ g.total }} tasks · Target: {{ g.target_date }}</span>
+                    </div>
+                    <div ng-if="ctrl.detail.goals.length===0" class="text-muted" style="padding:2rem; text-align:center;">No goals set yet.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- POST ANNOUNCEMENT MODAL -->
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:200;" ng-show="ctrl.showPostModal">
+        <div class="card" style="width:100%; max-width:500px;">
+            <h2 style="margin-bottom:1.5rem;">Post Announcement</h2>
+            <div class="form-group"><label>Title</label><input type="text" ng-model="ctrl.newAnnounce.title" placeholder="e.g. Exam Schedule Update"></div>
+            <div class="form-group"><label>Message</label><textarea rows="4" ng-model="ctrl.newAnnounce.message" placeholder="Write your announcement..."></textarea></div>
+            <div class="form-group"><label>Priority</label>
+                <select ng-model="ctrl.newAnnounce.priority"><option value="Normal">Normal</option><option value="High / Urgent">High / Urgent</option></select>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+                <button class="btn" style="background:var(--bg);" ng-click="ctrl.showPostModal=false">Cancel</button>
+                <button class="btn btn-primary" ng-click="ctrl.postAnnouncement()">{{ ctrl.isPosting ? 'Posting...' : 'Post to All Students' }}</button>
+            </div>
+            <div ng-if="ctrl.postSuccess" style="color:var(--success); margin-top:1rem; text-align:center;">✅ Announcement posted!</div>
+        </div>
+    </div>
+
+    <!-- MARK ATTENDANCE MODAL -->
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:200;" ng-show="ctrl.showAttendanceModal">
+        <div class="card" style="width:100%; max-width:600px; max-height:90vh; overflow-y:auto;">
+            <h2 style="margin-bottom:1.5rem;">Mark Attendance</h2>
+            <div style="display:flex; gap:1rem; margin-bottom:1.5rem;">
+                <div class="form-group" style="flex:2; margin-bottom:0;"><label>Subject</label><input type="text" ng-model="ctrl.att.subject" placeholder="e.g. Database Management"></div>
+                <div class="form-group" style="flex:1; margin-bottom:0;"><label>Class No.</label><input type="number" ng-model="ctrl.att.class_no" placeholder="e.g. 5" min="1"></div>
+                <div class="form-group" style="flex:1; margin-bottom:0;"><label>Date</label><input type="date" ng-model="ctrl.att.date"></div>
+            </div>
+            <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:1.5rem;">
+                <div style="background:var(--bg); padding:10px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
+                    <strong style="font-size:0.9rem;">Students ({{ ctrl.studentList.length }})</strong>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn" style="padding:4px 12px; font-size:0.8rem; background:var(--success); color:white; border:none;" ng-click="ctrl.markAll('Present')">All Present</button>
+                        <button class="btn" style="padding:4px 12px; font-size:0.8rem; background:var(--danger); color:white; border:none;" ng-click="ctrl.markAll('Absent')">All Absent</button>
+                    </div>
+                </div>
+                <div ng-repeat="s in ctrl.studentList" style="display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--border);">
+                    <div>
+                        <strong style="font-size:0.9rem;">{{ s.name }}</strong>
+                        <span class="text-muted" style="font-size:0.8rem; margin-left:8px;">{{ s.roll_no }}</span>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn" style="padding:4px 12px; font-size:0.82rem;"
+                                ng-style="{'background': s.status==='Present' ? 'var(--success)' : 'var(--bg)', 'color': s.status==='Present' ? 'white' : 'inherit', 'border': s.status==='Present' ? 'none' : '1px solid var(--border)'}"
+                                ng-click="s.status='Present'">Present</button>
+                        <button class="btn" style="padding:4px 12px; font-size:0.82rem;"
+                                ng-style="{'background': s.status==='Absent' ? 'var(--danger)' : 'var(--bg)', 'color': s.status==='Absent' ? 'white' : 'inherit', 'border': s.status==='Absent' ? 'none' : '1px solid var(--border)'}"
+                                ng-click="s.status='Absent'">Absent</button>
+                    </div>
+                </div>
+                <div ng-if="ctrl.studentList.length===0" style="padding:2rem; text-align:center; color:var(--text-muted);">No students found.</div>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+                <button class="btn" style="background:var(--bg);" ng-click="ctrl.showAttendanceModal=false">Cancel</button>
+                <button class="btn btn-primary" ng-click="ctrl.markAttendance()">{{ ctrl.isMarking ? 'Saving...' : 'Save Attendance' }}</button>
+            </div>
+            <div ng-if="ctrl.attSuccess" style="color:var(--success); margin-top:1rem; text-align:center;">✅ Saved for {{ ctrl.attSavedCount }} students!</div>
+            <div ng-if="ctrl.attError" style="color:var(--danger); margin-top:1rem; text-align:center;">{{ ctrl.attError }}</div>
+        </div>
+    </div>
+
+    <!-- ENTER MARKS MODAL -->
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:200;" ng-show="ctrl.showMarksModal">
+        <div class="card" style="width:100%; max-width:500px;">
+            <h2 style="margin-bottom:1.5rem;">Enter Marks</h2>
+            <div class="form-group"><label>Select Student</label>
+                <select ng-model="ctrl.marks.student_id">
+                    <option value="">-- Select Student --</option>
+                    <option ng-repeat="s in ctrl.studentList" value="{{ s.id }}">{{ s.name }} {{ s.roll_no ? '('+s.roll_no+')' : '' }}</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:1rem;">
+                <div class="form-group" style="flex:1;"><label>Subject Code</label><input type="text" ng-model="ctrl.marks.subject_code" placeholder="CS301"></div>
+                <div class="form-group" style="flex:1;"><label>Subject Name</label><input type="text" ng-model="ctrl.marks.subject_name" placeholder="Database Management"></div>
+            </div>
+            <div style="display:flex; gap:1rem;">
+                <div class="form-group" style="flex:1;"><label>Exam Type</label>
+                    <select ng-model="ctrl.marks.exam_type"><option value="Internal">Internal</option><option value="External">External</option><option value="Lab">Lab</option></select>
+                </div>
+                <div class="form-group" style="flex:1;"><label>Max Marks</label><input type="number" ng-model="ctrl.marks.max_marks"></div>
+                <div class="form-group" style="flex:1;"><label>Obtained</label><input type="number" ng-model="ctrl.marks.obtained_marks"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+                <button class="btn" style="background:var(--bg);" ng-click="ctrl.showMarksModal=false">Cancel</button>
+                <button class="btn btn-primary" ng-click="ctrl.submitMarks()">{{ ctrl.isSubmittingMarks ? 'Saving...' : 'Save Marks' }}</button>
+            </div>
+            <div ng-if="ctrl.marksSuccess" style="color:var(--success); margin-top:1rem; text-align:center;">✅ Marks saved!</div>
+            <div ng-if="ctrl.marksError" style="color:var(--danger); margin-top:1rem; text-align:center;">{{ ctrl.marksError }}</div>
+        </div>
+    </div>
+
+    <!-- AWARD POINTS MODAL -->
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:200;" ng-show="ctrl.showAwardModal">
+        <div class="card" style="width:100%; max-width:420px;">
+            <h2 style="margin-bottom:0.5rem;">Award Bonus Points</h2>
+            <p class="text-muted" style="font-size:0.9rem; margin-bottom:1.5rem;">Awarding points to <strong>{{ ctrl.selectedStudent.name }}</strong></p>
+            <div class="form-group"><label>Points to Award</label><input type="number" ng-model="ctrl.awardPoints" min="1" max="100" placeholder="e.g. 10"></div>
+            <div class="form-group"><label>Reason (optional)</label><input type="text" ng-model="ctrl.awardReason" placeholder="e.g. Excellent certificate upload"></div>
+            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+                <button class="btn" style="background:var(--bg);" ng-click="ctrl.showAwardModal=false">Cancel</button>
+                <button class="btn btn-primary" ng-click="ctrl.doAwardPoints()">{{ ctrl.isAwarding ? 'Awarding...' : '🏅 Award Points' }}</button>
+            </div>
+            <div ng-if="ctrl.awardSuccess" style="color:var(--success); margin-top:1rem; text-align:center;">✅ {{ ctrl.awardPoints }} points awarded!</div>
+            <div ng-if="ctrl.awardError" style="color:var(--danger); margin-top:1rem; text-align:center;">{{ ctrl.awardError }}</div>
+        </div>
+    </div>
+
+</div>
+
+
+<script src="js/config.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+<script>
+const app = angular.module('EduDash', []);
+app.controller('TeacherCtrl', function($http) {
+    const vm = this;
+    const token = localStorage.getItem('eduToken');
+    const profileStr = localStorage.getItem('eduProfile');
+    if (!token || !profileStr) { window.location.href = 'index.html'; return; }
+    vm.profile = JSON.parse(profileStr);
+    vm.currentDate = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+    const headers = { 'Authorization': 'Bearer ' + token };
+
+    // State
+    vm.classStats = { totalStudents:0, avgMark:0, avgAttendance:0 };
+    vm.atRisk = [];
+    vm.students = [];
+    vm.studentList = []; // for dropdowns
+    vm.announcements = [];
+    vm.loadingStudents = true;
+    vm.search = '';
+
+    // Modal state
+    vm.showPostModal = false;
+    vm.showAttendanceModal = false;
+    vm.showMarksModal = false;
+    vm.showAwardModal = false;
+    vm.newAnnounce = { title:'', message:'', priority:'Normal' };
+    vm.att = { subject:'', class_no:'', date: new Date() };
+    vm.marks = { student_id:'', subject_code:'', subject_name:'', exam_type:'External', max_marks:100, obtained_marks:'' };
+    vm.awardPoints = 10;
+    vm.awardReason = '';
+
+    // Detail panel
+    vm.selectedStudent = null;
+    vm.detailTab = 'marks';
+    vm.detail = { marks:[], attendance:[], certificates:[], goals:[] };
+    vm.loadingDetail = false;
+
+    // Load everything on init
+    function loadStats() {
+        $http.get(' + API_BASE + '/api/teacher/stats', { headers }).then(function(res) {
+            if (res.data.success) {
+                vm.classStats.totalStudents = res.data.totalStudents;
+                vm.classStats.avgMark = res.data.avgMark;
+                vm.classStats.avgAttendance = res.data.avgAttendance;
+                vm.atRisk = res.data.atRisk;
+            }
+        }).catch(angular.noop);
+    }
+
+    function loadStudentCards() {
+        vm.loadingStudents = true;
+        $http.get(' + API_BASE + '/api/teacher/students-full', { headers }).then(function(res) {
+            vm.loadingStudents = false;
+            if (res.data.success) {
+                vm.students = res.data.students;
+                vm.studentList = res.data.students.map(function(s) {
+                    return { id:s.id, name:s.name, roll_no:s.roll_no, status:'Present' };
+                });
+            }
+        }).catch(function() { vm.loadingStudents = false; });
+    }
+
+    function loadAnnouncements() {
+        $http.get(' + API_BASE + '/api/announcements', { headers }).then(function(res) {
+            if (res.data.success) vm.announcements = res.data.announcements;
+        }).catch(angular.noop);
+    }
+
+    loadStats();
+    loadStudentCards();
+    loadAnnouncements();
+
+    // Open student detail panel
+    vm.openStudent = function(s) {
+        vm.selectedStudent = s;
+        vm.detailTab = 'marks';
+        vm.detail = { marks:[], attendance:[], certificates:[], goals:[] };
+        vm.loadingDetail = true;
+        $http.get(' + API_BASE + '/api/teacher/student/' + s.id, { headers }).then(function(res) {
+            vm.loadingDetail = false;
+            if (res.data.success) {
+                vm.detail.marks = res.data.marks;
+                vm.detail.attendance = res.data.attendance;
+                vm.detail.certificates = res.data.certificates;
+                vm.detail.goals = res.data.goals;
+            }
+        }).catch(function() { vm.loadingDetail = false; });
+    };
+
+    vm.closeStudent = function() {
+        vm.selectedStudent = null;
+        vm.showAwardModal = false;
+    };
+
+    // Post announcement
+    vm.postAnnouncement = function() {
+        if (!vm.newAnnounce.title || !vm.newAnnounce.message) { alert('Fill title and message'); return; }
+        vm.isPosting = true;
+        $http.post(' + API_BASE + '/api/teacher/announce', vm.newAnnounce, { headers }).then(function(res) {
+            vm.isPosting = false;
+            if (res.data.success) {
+                vm.postSuccess = true;
+                loadAnnouncements();
+                setTimeout(function() { vm.showPostModal=false; vm.postSuccess=false; vm.newAnnounce={title:'',message:'',priority:'Normal'}; }, 1500);
+            }
+        }).catch(function() { vm.isPosting=false; });
+    };
+
+    // Mark attendance
+    vm.markAll = function(status) { vm.studentList.forEach(function(s) { s.status=status; }); };
+
+    vm.markAttendance = function() {
+        if (!vm.att.subject || !vm.att.date) { alert('Enter subject and date'); return; }
+        if (!vm.studentList.length) { alert('No students'); return; }
+        vm.isMarking = true; vm.attSuccess=false; vm.attError=null;
+
+        // Format date as YYYY-MM-DD string for DB
+        var d = vm.att.date;
+        var dateStr = d instanceof Date
+            ? d.toISOString().split('T')[0]
+            : String(d).split('T')[0];
+
+        var records = vm.studentList.map(function(s) {
+            return {
+                student_id: s.id,
+                name: s.name,
+                subject: vm.att.subject,
+                class_no: vm.att.class_no || null,
+                date: dateStr,
+                status: s.status
+            };
+        });
+        $http.post(' + API_BASE + '/api/attendance/mark-bulk', { records:records }, { headers }).then(function(res) {
+            vm.isMarking = false;
+            if (res.data.success) {
+                vm.attSuccess=true; vm.attSavedCount=res.data.saved;
+                loadStats();
+                loadStudentCards();
+                setTimeout(function() {
+                    vm.attSuccess=false;
+                    vm.showAttendanceModal=false;
+                    vm.att={subject:'', class_no:'', date:new Date()};
+                }, 2000);
+            } else {
+                vm.attError = res.data.message || 'Failed to save.';
+            }
+        }).catch(function(err) {
+            vm.isMarking=false;
+            vm.attError = (err.data && err.data.message) ? err.data.message : 'Failed to save attendance.';
+        });
+    };
+
+    // Submit marks
+    vm.submitMarks = function() {
+        if (!vm.marks.student_id || !vm.marks.subject_code || !vm.marks.obtained_marks) { alert('Fill all required fields'); return; }
+        vm.isSubmittingMarks=true; vm.marksSuccess=false; vm.marksError=null;
+        $http.post(' + API_BASE + '/api/teacher/marks', vm.marks, { headers }).then(function(res) {
+            vm.isSubmittingMarks=false;
+            if (res.data.success) {
+                vm.marksSuccess=true;
+                loadStats(); loadStudentCards();
+                setTimeout(function() { vm.marksSuccess=false; vm.showMarksModal=false; vm.marks={student_id:'',subject_code:'',subject_name:'',exam_type:'External',max_marks:100,obtained_marks:''}; }, 1500);
+            }
+        }).catch(function() { vm.isSubmittingMarks=false; vm.marksError='Failed.'; });
+    };
+
+    // Award points
+    vm.doAwardPoints = function() {
+        if (!vm.awardPoints || vm.awardPoints < 1) { vm.awardError='Enter valid points'; return; }
+        vm.isAwarding=true; vm.awardSuccess=false; vm.awardError=null;
+        $http.post(' + API_BASE + '/api/teacher/award-points', { student_id:vm.selectedStudent.id, points:vm.awardPoints, reason:vm.awardReason }, { headers })
+            .then(function(res) {
+                vm.isAwarding=false;
+                if (res.data.success) {
+                    vm.awardSuccess=true;
+                    vm.selectedStudent.bonusPoints = (vm.selectedStudent.bonusPoints || 0) + parseInt(vm.awardPoints);
+                    vm.selectedStudent.score = vm.selectedStudent.score + parseInt(vm.awardPoints);
+                    loadStudentCards();
+                    setTimeout(function() { vm.showAwardModal=false; vm.awardSuccess=false; vm.awardPoints=10; vm.awardReason=''; }, 1500);
+                }
+            }).catch(function() { vm.isAwarding=false; vm.awardError='Failed.'; });
+    };
+
+    vm.logout = function() {
+        localStorage.removeItem('eduToken');
+        localStorage.removeItem('eduProfile');
+        window.location.href = 'index.html';
+    };
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="EduDash">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduDash - Certificates</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/student.css">
+</head>
+<body ng-controller="CertsCtrl as ctrl">
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="profile">
+            <div class="avatar">👨‍🎓</div>
+            <strong style="display:block; font-size:1.1rem; margin-bottom:5px;">{{ ctrl.profile.name }}</strong>
+            <span class="text-muted" style="font-size:0.85rem;">{{ ctrl.profile.roll_no }}</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="student-dashboard.html">🏠 Dashboard</a></li>
+            <li><a href="student-marks.html">📊 My Marks</a></li>
+            <li><a href="student-attendance.html">📅 Attendance</a></li>
+            <li><a href="student-goals.html">🎯 My Goals</a></li>
+            <li><a href="student-certificates.html" class="active">📜 Certificates</a></li>
+            <li><a href="student-leaderboard.html">🏆 Leaderboard</a></li>
+            <li><a href="student-announcements.html">🔔 Announcements</a></li>
+            <li><a href="student-settings.html">⚙️ Settings</a></li>
+        </ul>
+        <div style="margin-top:auto;"><button class="btn" style="width:100%; border:1px solid var(--border); background:transparent;" ng-click="ctrl.logout()">Logout</button></div>
+    </aside>
+
+    <main class="main-content">
+        <div class="header">
+            <div>
+                <h1 style="font-size:1.8rem;">My Certificates</h1>
+                <p class="text-muted">{{ ctrl.certs.length }} certificates in your portfolio</p>
+            </div>
+            <button class="btn btn-primary" ng-click="ctrl.showUploadModal = true">+ Upload Certificate</button>
+        </div>
+
+        <!-- STATS -->
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:2rem;">
+            <div class="card stat-card primary"><div class="text-muted">Total</div><div class="number">{{ ctrl.certs.length }}</div></div>
+            <div class="card stat-card success"><div class="text-muted">Courses</div><div class="number">{{ ctrl.countByCategory('Course') }}</div></div>
+            <div class="card stat-card warning"><div class="text-muted">Hackathons</div><div class="number">{{ ctrl.countByCategory('Hackathon') }}</div></div>
+        </div>
+
+        <!-- FILTER TABS -->
+        <div style="display:flex; gap:1rem; border-bottom:1px solid var(--border); margin-bottom:2rem;">
+            <div ng-repeat="tab in ctrl.tabs"
+                 style="padding-bottom:10px; cursor:pointer; font-weight:500; border-bottom:2px solid transparent;"
+                 ng-style="{'color': ctrl.activeTab===tab ? 'var(--primary)' : 'var(--text-muted)', 'border-bottom-color': ctrl.activeTab===tab ? 'var(--primary)' : 'transparent'}"
+                 ng-click="ctrl.activeTab = tab">{{ tab }}</div>
+        </div>
+
+        <!-- CERTS GRID -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:1.5rem;">
+            <div class="card" ng-repeat="cert in ctrl.filtered()" style="display:flex; flex-direction:column; text-align:center;">
+                <div style="height:8px; border-radius:12px 12px 0 0; margin:-1.5rem -1.5rem 1.5rem -1.5rem;"
+                     ng-style="{'background': cert.category==='Hackathon' ? 'var(--warning)' : cert.category==='Academic' ? 'var(--primary)' : 'var(--success)'}"></div>
+                <div style="font-size:3rem; margin-bottom:1rem;">{{ cert.category==='Hackathon' ? '🏆' : cert.category==='Academic' ? '🎓' : '📜' }}</div>
+                <h3 style="font-size:1rem; margin-bottom:0.4rem;">{{ cert.title }}</h3>
+                <p class="text-muted" style="font-size:0.85rem; margin-bottom:0.2rem;">{{ cert.issuer }}</p>
+                <p class="text-muted" style="font-size:0.82rem; margin-bottom:1.5rem;">{{ cert.date }}</p>
+                <div style="margin-top:auto; border-top:1px solid var(--border); padding-top:1rem; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.78rem; background:var(--bg); padding:3px 10px; border-radius:12px; font-weight:500;">{{ cert.category }}</span>
+                    <div style="display:flex; gap:6px;">
+                        <a ng-if="cert.file_url" ng-href="{{ cert.file_url }}" target="_blank"
+                           class="btn" style="padding:4px 12px; font-size:0.82rem; background:#EFF6FF; color:var(--primary); border:none;">View</a>
+                        <button class="btn" style="padding:4px 12px; font-size:0.82rem; background:#FEF2F2; color:var(--danger); border:none;" ng-click="ctrl.delete($index)">Remove</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div ng-if="ctrl.filtered().length === 0" style="text-align:center; padding:4rem; color:var(--text-muted);">
+            <div style="font-size:3rem; margin-bottom:1rem;">📜</div>
+            <p style="font-size:1.1rem; font-weight:500;">No certificates yet</p>
+            <p style="font-size:0.9rem; margin-top:0.5rem;">Click "+ Upload Certificate" to add your first one</p>
+        </div>
+    </main>
+
+    <!-- UPLOAD MODAL -->
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:50;" ng-show="ctrl.showUploadModal">
+        <div class="card" style="width:100%; max-width:500px;">
+            <h2 style="margin-bottom:1.5rem;">Upload Certificate</h2>
+
+            <div style="border:2px dashed var(--border); padding:2rem; text-align:center; border-radius:8px; margin-bottom:1.5rem; cursor:pointer; background:var(--bg);"
+                 onclick="document.getElementById('certFileInput').click()">
+                <span style="font-size:2rem;">📄</span>
+                <p style="margin-top:10px; font-weight:500; color:var(--primary);">Click to select file</p>
+                <p class="text-muted" style="font-size:0.82rem; margin-top:4px;" ng-if="!ctrl.selectedFileName">PDF, JPG, PNG supported</p>
+                <p style="font-size:0.88rem; margin-top:4px; color:var(--success); font-weight:500;" ng-if="ctrl.selectedFileName">✅ {{ ctrl.selectedFileName }}</p>
+            </div>
+            <input type="file" id="certFileInput" accept=".pdf,.png,.jpg,.jpeg" style="display:none;"
+                   onchange="angular.element(this).scope().ctrl.onFileSelect(this)">
+
+            <div class="form-group"><label>Certificate Title</label><input type="text" ng-model="ctrl.newCert.title" placeholder="e.g. AWS Cloud Practitioner"></div>
+            <div style="display:flex; gap:1rem;">
+                <div class="form-group" style="flex:1;"><label>Issuer</label><input type="text" ng-model="ctrl.newCert.issuer" placeholder="e.g. Amazon"></div>
+                <div class="form-group" style="flex:1;"><label>Issue Date</label><input type="date" ng-model="ctrl.newCert.issued_date"></div>
+            </div>
+            <div class="form-group"><label>Category</label>
+                <select ng-model="ctrl.newCert.category"><option>Course</option><option>Hackathon</option><option>Academic</option></select>
+            </div>
+            <div ng-if="ctrl.uploadError" style="color:var(--danger); font-size:0.88rem; margin-bottom:1rem;">{{ ctrl.uploadError }}</div>
+            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+                <button class="btn" style="background:var(--bg);" ng-click="ctrl.showUploadModal = false; ctrl.selectedFileName = null; ctrl.selectedFile = null; ctrl.uploadError = null;">Cancel</button>
+                <button class="btn btn-primary" ng-click="ctrl.upload()" ng-disabled="ctrl.uploading">{{ ctrl.uploading ? 'Uploading...' : 'Save Certificate' }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+<script>
+const app = angular.module('EduDash', []);
+app.controller('CertsCtrl', function($http) {
+    const vm = this;
+    const token = localStorage.getItem('eduToken');
+    const profileStr = localStorage.getItem('eduProfile');
+    if (!token) { window.location.href = 'index.html'; return; }
+    vm.profile = profileStr ? JSON.parse(profileStr) : { name: 'Demo Student', roll_no: 'CSE-2023-045' };
+
+    vm.showUploadModal = false;
+    vm.newCert = { category: 'Course' };
+    vm.selectedFile = null;
+    vm.selectedFileName = null;
+    vm.uploading = false;
+    vm.uploadError = null;
+
+    // Supabase config for direct storage upload from browser
+    const SUPABASE_URL = 'https://cgqcfcdkshdxqcdwshuu.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNncWNmY2Rrc2hkeHFjZHdzaHV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2OTYxNTEsImV4cCI6MjA5MTI3MjE1MX0.DNomzBc6ojbcjV1xS0uw8s9VuDujUSjcaO93CQbPFpE';
+
+    vm.onFileSelect = function(input) {
+        if (input.files && input.files[0]) {
+            vm.selectedFile = input.files[0];
+            vm.selectedFileName = input.files[0].name;
+            // auto-fill title if empty
+            if (!vm.newCert.title) {
+                vm.newCert.title = input.files[0].name.replace(/\.[^/.]+$/, '');
+            }
+            // trigger angular digest
+            var scope = angular.element(input).scope();
+            if (scope) scope.$apply();
+        }
+    };
+    vm.tabs = ['All', 'Course', 'Hackathon', 'Academic'];
+    vm.activeTab = 'All';
+    vm.certs = [];
+    const headers = { 'Authorization': 'Bearer ' + token };
+
+    function loadCerts() {
+        $http.get('/api/certificates/my', { headers }).then(function(res) {
+            vm.certs = (res.data.success) ? res.data.certificates : [];
+        }).catch(function() { vm.certs = []; });
+    }
+    loadCerts();
+
+    vm.filtered = function() {
+        if (vm.activeTab === 'All') return vm.certs;
+        return vm.certs.filter(function(c) { return c.category === vm.activeTab; });
+    };
+
+    vm.countByCategory = function(cat) {
+        return vm.certs.filter(function(c) { return c.category === cat; }).length;
+    };
+
+    vm.upload = function() {
+        if (!vm.newCert.title) { vm.uploadError = 'Please enter a title.'; return; }
+        vm.uploading = true;
+        vm.uploadError = null;
+
+        function saveCertRecord(fileUrl) {
+            var payload = { title: vm.newCert.title, issuer: vm.newCert.issuer || '', issued_date: vm.newCert.issued_date || null, category: vm.newCert.category, file_url: fileUrl };
+            $http.post('/api/certificates/upload', payload, { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(function(res) {
+                    vm.uploading = false;
+                    if (res.data.success && res.data.certificate) vm.certs.unshift(res.data.certificate);
+                    vm.newCert = { category: 'Course' };
+                    vm.selectedFile = null; vm.selectedFileName = null;
+                    vm.showUploadModal = false;
+                })
+                .catch(function() { vm.uploading = false; vm.uploadError = 'Failed to save. Try again.'; });
+        }
+
+        if (vm.selectedFile) {
+            // Try Supabase Storage first
+            var fileName = Date.now() + '_' + vm.selectedFile.name.replace(/\s+/g, '_');
+            fetch(SUPABASE_URL + '/storage/v1/object/certificates/' + fileName, {
+                method: 'POST',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': vm.selectedFile.type },
+                body: vm.selectedFile
+            }).then(function(res) {
+                if (res.ok) {
+                    // Storage upload succeeded
+                    var fileUrl = SUPABASE_URL + '/storage/v1/object/public/certificates/' + fileName;
+                    saveCertRecord(fileUrl);
+                } else {
+                    // Storage failed — convert to base64 and store inline
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        saveCertRecord(e.target.result); // base64 data URL
+                    };
+                    reader.readAsDataURL(vm.selectedFile);
+                }
+            }).catch(function() {
+                // Network error — convert to base64
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    saveCertRecord(e.target.result);
+                };
+                reader.readAsDataURL(vm.selectedFile);
+            });
+        } else {
+            saveCertRecord(null);
+        }
+    };
+
+    vm.delete = function(idx) {
+        var cert = vm.certs[idx];
+        vm.certs.splice(idx, 1);
+        if (cert.id) {
+            $http.delete('/api/certificates/' + cert.id, { headers }).catch(function() {
+                vm.certs.splice(idx, 0, cert);
+            });
+        }
+    };
+
+    vm.logout = function() {
+        localStorage.removeItem('eduToken');
+        localStorage.removeItem('eduProfile');
+        window.location.href = 'index.html';
+    };
+});
+</script>
+</body>
+</html>

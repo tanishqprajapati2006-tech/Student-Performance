@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="EduDash">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduDash - My Goals</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/student.css">
+</head>
+<body ng-controller="GoalsCtrl as ctrl">
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="profile">
+            <div class="avatar">👨‍🎓</div>
+            <strong style="display:block; font-size:1.1rem; margin-bottom:5px;">{{ ctrl.profile.name }}</strong>
+            <span class="text-muted" style="font-size:0.85rem;">{{ ctrl.profile.roll_no }}</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="student-dashboard.html">🏠 Dashboard</a></li>
+            <li><a href="student-marks.html">📊 My Marks</a></li>
+            <li><a href="student-attendance.html">📅 Attendance</a></li>
+            <li><a href="student-goals.html" class="active">🎯 My Goals</a></li>
+            <li><a href="student-certificates.html">📜 Certificates</a></li>
+            <li><a href="student-leaderboard.html">🏆 Leaderboard</a></li>
+            <li><a href="student-announcements.html">🔔 Announcements</a></li>
+            <li><a href="student-settings.html">⚙️ Settings</a></li>
+        </ul>
+        <div style="margin-top:auto;"><button class="btn" style="width:100%; border:1px solid var(--border); background:transparent;" ng-click="ctrl.logout()">Logout</button></div>
+    </aside>
+
+    <main class="main-content">
+        <div class="header">
+            <div>
+                <h1 style="font-size:1.8rem;">My Goals</h1>
+                <p class="text-muted">Track your academic and personal targets</p>
+            </div>
+            <button class="btn btn-primary" ng-click="ctrl.showCreateModal = true">+ New Goal</button>
+        </div>
+
+        <!-- SUMMARY STATS -->
+        <div class="stats-grid" style="grid-template-columns: repeat(3,1fr); margin-bottom:2rem;">
+            <div class="card stat-card primary"><div class="text-muted">Total Goals</div><div class="number">{{ ctrl.goals.length }}</div></div>
+            <div class="card stat-card success"><div class="text-muted">Completed</div><div class="number">{{ ctrl.completedCount() }}</div></div>
+            <div class="card stat-card warning"><div class="text-muted">In Progress</div><div class="number">{{ ctrl.goals.length - ctrl.completedCount() }}</div></div>
+        </div>
+
+        <!-- GOALS GRID -->
+        <div ng-if="ctrl.goals.length === 0" style="text-align:center; padding:4rem; color:var(--text-muted);">
+            <div style="font-size:3rem; margin-bottom:1rem;">🎯</div>
+            <p style="font-size:1.1rem; font-weight:500;">No goals yet</p>
+            <p style="font-size:0.9rem; margin-top:0.5rem;">Click "+ New Goal" to set your first target</p>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:1.5rem;">
+            <div class="card" ng-repeat="goal in ctrl.goals" style="display:flex; flex-direction:column;">
+                <div style="height:6px; border-radius:12px 12px 0 0; margin:-1.5rem -1.5rem 1rem -1.5rem;"
+                     ng-style="{'background': goal.completed >= goal.total ? 'var(--success)' : (goal.overdue ? 'var(--danger)' : 'var(--secondary)')}"></div>
+                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:0.5rem;">
+                    <h3 style="font-size:1.05rem;">{{ goal.title }}</h3>
+                    <span style="font-size:0.75rem; padding:3px 8px; border-radius:12px; background:var(--bg); white-space:nowrap; margin-left:8px;">{{ goal.category }}</span>
+                </div>
+                <p class="text-muted" style="font-size:0.88rem; margin-bottom:1.5rem;">{{ goal.description }}</p>
+                <div style="margin-top:auto;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <span style="font-size:0.85rem; font-weight:500;">{{ goal.completed }} / {{ goal.total }} tasks</span>
+                        <span style="font-size:0.85rem; color:var(--primary); font-weight:600;">{{ ((goal.completed/goal.total)*100)|number:0 }}%</span>
+                    </div>
+                    <div class="progress-bg"><div class="progress-bar" style="width:{{ (goal.completed/goal.total)*100 }}%;"
+                         ng-style="{'background': goal.completed >= goal.total ? 'var(--success)' : 'var(--secondary)'}"></div></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; border-top:1px solid var(--border); padding-top:1rem;">
+                        <span style="font-size:0.82rem;" ng-style="{'color': goal.overdue ? 'var(--danger)' : 'var(--text-muted)'}">
+                            {{ goal.overdue ? '⚠️ Overdue' : '📅 ' + goal.daysLeft + ' days left' }}
+                        </span>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn" style="padding:4px 10px; font-size:0.8rem; background:var(--bg); border:1px solid var(--border);"
+                                    ng-click="ctrl.increment(goal)" ng-disabled="goal.completed >= goal.total">+1 Task</button>
+                            <button class="btn" style="padding:4px 10px; font-size:0.8rem; background:#FEF2F2; color:var(--danger); border:none;"
+                                    ng-click="ctrl.deleteGoal($index)">✕</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- CREATE MODAL -->
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:50;" ng-show="ctrl.showCreateModal">
+        <div class="card" style="width:100%; max-width:500px;">
+            <h2 style="margin-bottom:1.5rem;">Create New Goal</h2>
+            <div class="form-group"><label>Goal Title</label><input type="text" ng-model="ctrl.newGoal.title" placeholder="e.g. Complete Web Dev Project"></div>
+            <div class="form-group"><label>Description</label><textarea rows="2" ng-model="ctrl.newGoal.description" placeholder="What do you want to achieve?"></textarea></div>
+            <div style="display:flex; gap:1rem;">
+                <div class="form-group" style="flex:1;"><label>Category</label>
+                    <select ng-model="ctrl.newGoal.category"><option>Academic</option><option>Skill</option><option>Personal</option><option>Career</option></select>
+                </div>
+                <div class="form-group" style="flex:1;"><label>Target Date</label><input type="date" ng-model="ctrl.newGoal.targetDate"></div>
+            </div>
+            <div class="form-group"><label>Total Tasks / Checkpoints</label><input type="number" ng-model="ctrl.newGoal.total" min="1" value="10"></div>
+            <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+                <button class="btn" style="background:var(--bg);" ng-click="ctrl.showCreateModal = false">Cancel</button>
+                <button class="btn btn-primary" ng-click="ctrl.createGoal()">Create Goal</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+<script>
+const app = angular.module('EduDash', []);
+app.controller('GoalsCtrl', function($http, $scope) {
+    const vm = this;
+    const token = localStorage.getItem('eduToken');
+    const profileStr = localStorage.getItem('eduProfile');
+    if (!token) { window.location.href = 'index.html'; return; }
+    vm.profile = profileStr ? JSON.parse(profileStr) : { name: 'Demo Student', roll_no: 'CSE-2023-045' };
+
+    vm.showCreateModal = false;
+    vm.newGoal = { category: 'Academic', total: 10 };
+    vm.goals = [];
+    const headers = { 'Authorization': 'Bearer ' + token };
+
+    function loadGoals() {
+        $http.get(' + API_BASE + '/api/goals/my', { headers }).then(function(res) {
+            vm.goals = (res.data.success) ? res.data.goals : [];
+            vm.goals = vm.goals.map(function(g) {
+                var days = g.target_date ? Math.ceil((new Date(g.target_date) - new Date()) / 86400000) : 30;
+                return angular.extend(g, { daysLeft: Math.max(days, 0), overdue: days < 0 });
+            });
+        }).catch(function() { vm.goals = []; });
+    }
+    loadGoals();
+
+    vm.completedCount = function() {
+        return vm.goals.filter(function(g) { return g.completed >= g.total; }).length;
+    };
+
+    vm.increment = function(goal) {
+        if (goal.completed >= goal.total) return;
+        // optimistic update
+        goal.completed++;
+        if (goal.id && !goal.id.startsWith('d')) {
+            $http.put(' + API_BASE + '/api/goals/' + goal.id + '/increment', {}, { headers }).catch(function() { goal.completed--; });
+        }
+    };
+
+    vm.deleteGoal = function(idx) {
+        var goal = vm.goals[idx];
+        vm.goals.splice(idx, 1);
+        if (goal.id) {
+            $http.delete(' + API_BASE + '/api/goals/' + goal.id, { headers }).catch(function() {
+                // re-add if delete failed
+                vm.goals.splice(idx, 0, goal);
+            });
+        }
+    };
+
+    vm.createGoal = function() {
+        if (!vm.newGoal.title) return;
+        $http.post(' + API_BASE + '/api/goals/create', vm.newGoal, { headers }).then(function(res) {
+            if (res.data.success && res.data.goal) {
+                var g = res.data.goal;
+                var days = g.target_date ? Math.ceil((new Date(g.target_date) - new Date()) / 86400000) : 30;
+                vm.goals.unshift(angular.extend(g, { daysLeft: Math.max(days,0), overdue: days < 0 }));
+            } else {
+                // fallback: add locally
+                vm.goals.unshift({ id: 'local_' + Date.now(), title: vm.newGoal.title, description: vm.newGoal.description || '', category: vm.newGoal.category, completed: 0, total: vm.newGoal.total || 10, daysLeft: 30, overdue: false });
+            }
+            vm.newGoal = { category: 'Academic', total: 10 };
+            vm.showCreateModal = false;
+        }).catch(function() {
+            vm.goals.unshift({ id: 'local_' + Date.now(), title: vm.newGoal.title, description: vm.newGoal.description || '', category: vm.newGoal.category, completed: 0, total: vm.newGoal.total || 10, daysLeft: 30, overdue: false });
+            vm.newGoal = { category: 'Academic', total: 10 };
+            vm.showCreateModal = false;
+        });
+    };
+
+    vm.logout = function() {
+        localStorage.removeItem('eduToken');
+        localStorage.removeItem('eduProfile');
+        window.location.href = 'index.html';
+    };
+});
+</script>
+</body>
+</html>

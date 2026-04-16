@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="EduDash">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduDash - Student Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/student.css">
+    <style>
+        .ticker-wrap { background: var(--surface); padding: 10px; border-radius: 8px; margin-bottom: 2rem; border-left: 4px solid var(--primary); overflow: hidden; position: relative; }
+        .ticker { display: flex; white-space: nowrap; animation: ticker 30s linear infinite; }
+        .ticker-item { padding-right: 2rem; font-size: 0.9rem; color: var(--text-main); font-weight: 500; }
+        @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+        .quick-action { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); transition: all 0.2s; cursor: pointer; text-decoration: none; color: inherit; }
+        .quick-action:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .quick-action .icon { font-size: 1.5rem; }
+    </style>
+</head>
+<body ng-controller="DashboardCtrl as ctrl">
+
+<div class="dashboard-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="profile">
+            <div class="avatar" style="background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; font-size:1.5rem;">{{ ctrl.profile.name.charAt(0) }}</div>
+            <strong style="display:block; font-size:1rem; margin-bottom:3px;">{{ ctrl.profile.name }}</strong>
+            <span class="text-muted" style="font-size:0.8rem;">{{ ctrl.profile.roll_no }} · {{ ctrl.profile.branch }}</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="student-dashboard.html" class="active">🏠 Dashboard</a></li>
+            <li><a href="student-marks.html">📊 My Marks</a></li>
+            <li><a href="student-attendance.html">📅 Attendance</a></li>
+            <li><a href="student-goals.html">🎯 My Goals</a></li>
+            <li><a href="student-certificates.html">📜 Certificates</a></li>
+            <li><a href="student-leaderboard.html">🏆 Leaderboard</a></li>
+            <li><a href="student-announcements.html">🔔 Announcements</a></li>
+            <li><a href="student-settings.html">⚙️ Settings</a></li>
+        </ul>
+        <div style="margin-top:auto;">
+            <button class="btn" style="width:100%; border:1px solid var(--border); background:transparent;" ng-click="ctrl.logout()">Logout</button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <h1 style="font-size:1.6rem;">My Dashboard</h1>
+                <p class="text-muted" style="font-size:0.88rem;">Academic Year {{ ctrl.profile.year }} · Semester Overview</p>
+            </div>
+            <div style="text-align: right;">
+                <span class="badge badge-green" style="font-size: 0.9rem; padding: 6px 12px;">Rank #{{ ctrl.stats.rank || 'N/A' }}</span>
+            </div>
+        </div>
+
+        <!-- ANNOUNCEMENTS TICKER -->
+        <div class="ticker-wrap">
+            <div class="ticker">
+                <div class="ticker-item" ng-repeat="a in ctrl.announcements">
+                    {{ a.priority === 'High / Urgent' ? '‼️' : '🔔' }} {{ a.title }}: {{ a.message }}
+                </div>
+                <div class="ticker-item" ng-if="ctrl.announcements.length === 0">Welcome back to EduDash! No new announcements today.</div>
+            </div>
+        </div>
+
+        <!-- STATS ROW -->
+        <div class="stats-grid" style="margin-bottom:2rem;">
+            <div class="card stat-card primary">
+                <div class="text-muted">Attendance</div>
+                <div class="number">{{ ctrl.stats.attendance }}%</div>
+                <div style="font-size: 0.75rem; margin-top: 5px; opacity: 0.8;">Target: 75%+</div>
+            </div>
+            <div class="card stat-card success">
+                <div class="text-muted">Current Score</div>
+                <div class="number">{{ ctrl.stats.score }}</div>
+                <div style="font-size: 0.75rem; margin-top: 5px; opacity: 0.8;">Points earned</div>
+            </div>
+            <div class="card stat-card warning">
+                <div class="text-muted">Average Grade</div>
+                <div class="number">{{ ctrl.stats.avgMarks }}%</div>
+                <div style="font-size: 0.75rem; margin-top: 5px; opacity: 0.8;">Across all subjects</div>
+            </div>
+            <div class="card stat-card danger">
+                <div class="text-muted">Certificates</div>
+                <div class="number">{{ ctrl.stats.certs }}</div>
+                <div style="font-size: 0.75rem; margin-top: 5px; opacity: 0.8;">Verified uploads</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- RECENT PERFORMANCE -->
+            <div class="card">
+                <div class="panel-title">Recent Marks</div>
+                <div ng-if="ctrl.loading" class="text-muted" style="padding: 2rem; text-align: center;">Loading results...</div>
+                <table ng-if="!ctrl.loading && ctrl.marks.length > 0" style="width: 100%; border-collapse: collapse;">
+                    <thead><tr style="text-align: left; border-bottom: 2px solid var(--border);">
+                        <th style="padding: 10px;">Subject</th>
+                        <th style="padding: 10px;">Score</th>
+                        <th style="padding: 10px;">Grade</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr ng-repeat="m in ctrl.marks | limitTo: 5" style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 10px;">
+                                <strong style="display: block; font-size: 0.9rem;">{{ m.subject_name }}</strong>
+                                <span class="text-muted" style="font-size: 0.78rem;">{{ m.subject_code }}</span>
+                            </td>
+                            <td style="padding: 10px; font-weight: 700;">{{ m.obtained_marks }}/{{ m.max_marks }}</td>
+                            <td style="padding: 10px;"><span class="badge" ng-class="m.grade === 'F' ? 'badge-red' : 'badge-green'">{{ m.grade }}</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div ng-if="!ctrl.loading && ctrl.marks.length === 0" class="text-muted" style="padding: 2rem; text-align: center;">No marks recorded yet.</div>
+                <a href="student-marks.html" class="btn" style="display:block; text-align:center; margin-top: 1rem; background: var(--bg); border: 1px solid var(--border);">View Transcript</a>
+            </div>
+
+            <!-- QUICK ACTIONS -->
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="card">
+                    <div class="panel-title">Quick Actions</div>
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                        <a href="student-goals.html" class="quick-action">
+                            <div class="icon">🎯</div>
+                            <div>
+                                <strong style="display:block; font-size: 0.9rem;">Update Goals</strong>
+                                <span class="text-muted" style="font-size: 0.78rem;">Track your progress</span>
+                            </div>
+                        </a>
+                        <a href="student-certificates.html" class="quick-action">
+                            <div class="icon">📜</div>
+                            <div>
+                                <strong style="display:block; font-size: 0.9rem;">Upload Certs</strong>
+                                <span class="text-muted" style="font-size: 0.78rem;">Earn bonus points</span>
+                            </div>
+                        </a>
+                        <a href="student-leaderboard.html" class="quick-action">
+                            <div class="icon">🏆</div>
+                            <div>
+                                <strong style="display:block; font-size: 0.9rem;">Leaderboard</strong>
+                                <span class="text-muted" style="font-size: 0.78rem;">See your standing</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card" style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: none;">
+                    <strong style="color: #1E40AF; display: block; margin-bottom: 5px;">✨ Growth Tip</strong>
+                    <p style="font-size: 0.85rem; color: #1E3A8A; line-height: 1.4;">{{ ctrl.growthTip }}</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+<script>
+const app = angular.module('EduDash', []);
+
+app.controller('DashboardCtrl', function($http, $scope) {
+    const vm = this;
+    const token = localStorage.getItem('eduToken');
+    const profileStr = localStorage.getItem('eduProfile');
+
+    if (!token || !profileStr) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    vm.profile = JSON.parse(profileStr);
+    vm.loading = true;
+    vm.announcements = [];
+    vm.marks = [];
+    vm.stats = { attendance: 0, score: 0, avgMarks: 0, certs: 0, rank: '...' };
+
+    const headers = { 'Authorization': 'Bearer ' + token };
+
+    // Load Dashboard Data
+    $http.get('/api/students/dashboard', { headers }).then(function(res) {
+        vm.loading = false;
+        const d = res.data;
+        vm.marks = d.marks || [];
+        vm.stats.attendance = (d.attendance && d.attendance.percentage) || 0;
+        const score = d.score ? d.score.total : 0;
+        vm.stats.score = score + (d.bonusPoints || 0);
+        // Calculate avg marks from marks array
+        if (vm.marks.length > 0) {
+            vm.stats.avgMarks = Math.round(vm.marks.reduce(function(s,m){return s+(m.obtained_marks||0);},0) / vm.marks.length);
+        }
+        vm.stats.certs = (d.certificates && d.certificates.length) || 0;
+    }).catch(function() { vm.loading = false; });
+
+    // Load Announcements
+    $http.get('/api/announcements', { headers }).then(function(res) {
+        if (res.data.success) vm.announcements = res.data.announcements;
+    }).catch(angular.noop);
+
+    // Load rank from leaderboard
+    $http.get('/api/students/leaderboard', { headers }).then(function(res) {
+        if (res.data.success && res.data.leaderboard) {
+            var myId = vm.profile.id;
+            var idx = res.data.leaderboard.findIndex(function(s) { return s.id === myId; });
+            vm.stats.rank = idx >= 0 ? (idx + 1) : 'N/A';
+        }
+    }).catch(angular.noop);
+
+    const tips = [
+        "Consistent attendance above 85% significantly boosts long-term performance.",
+        "Uploading a certificate awards immediate bonus points to your score!",
+        "Check your goals weekly to ensure you stay on track for your targets.",
+        "Your rank is calculated based on marks, attendance, and bonus points."
+    ];
+    vm.growthTip = tips[Math.floor(Math.random() * tips.length)];
+
+    vm.logout = function() {
+        localStorage.removeItem('eduToken');
+        localStorage.removeItem('eduProfile');
+        window.location.href = 'index.html';
+    };
+});
+</script>
+</body>
+</html>
